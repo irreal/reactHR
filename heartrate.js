@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { Text, View } from 'react-native';
 import { BleManager } from 'react-native-ble-plx';
-
+import b64 from './Base64';
 
 export default class Heartrate extends Component {
     constructor() {
@@ -31,7 +31,7 @@ export default class Heartrate extends Component {
             // Check if it is a device you are looking for based on advertisement data
             // or other criteria.
 
-            if (device.name === 'XingZhe_HRM' ||
+            if (device.name === 'Geonaute Dual HR' ||
                 device.name === 'SensorTag') {
 
                 console.log('found device! ', device.name);
@@ -53,44 +53,25 @@ export default class Heartrate extends Component {
                     .then((chars) => {
                         console.log('characteristics: ', chars);
                         chars[0].monitor(((err, data) => {
-
-                            shitty2.readCharacteristicForService("0000180d-0000-1000-8000-00805f9b34fb", "00002a37-0000-1000-8000-00805f9b34fb").then((v, v2) => {
-
-                                console.log('ovaj drugi vraća', v, v2);
-                            }).catch(e => console.log);
-
-                            function hex2bin(hex) {
-                                return ("00000000" + (parseInt(hex, 16)).toString(2)).substr(-8);
+                            console.log(data.value)
+                            var dataB = b64.atob(data.value);
+                            var rawLength = dataB.length;
+                            var array = new Uint8Array(new ArrayBuffer(rawLength));
+                            for (i = 0; i < rawLength; i++) {
+                                array[i] = dataB.charCodeAt(i);
                             }
-                            var bits = hex2bin(data.value);
-                            const fromHexString = hexString =>
-                                new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-                            var value = fromHexString(data.value);
-                            console.log('duzina je', value.length, value.byteLength);
+                            valueFormat = (array[0] >> 0) & 0b01;
+                            var bpm;
+                            if (valueFormat == 0) {
+                                bpm = array[1].toString(10);
+                            }
+                            else {
+                                var array16 = new Uint16Array(array.subarray(1, 3));
+                                bpm = array16[0].toString(10);
+                            }
+                            console.log('jupi jej format', valueFormat);
+                            console.log('jupi jej dec', bpm);
 
-                            console.log('bitovi: ' + bits);
-
-                            // const flags = value[0];
-                            // const valueFormat = (flags >> 0) & 0b01
-                            // const sensorContactStatus = (flags >> 1) & 0b11
-                            // const energyExpendedStatus = (flags >> 3) & 0b01
-                            // const rrIntervalStatus = (flags >> 4) & 0b01
-                            // console.log('valueformat', valueFormat);
-                            // console.log('sensor contact', sensorContactStatus);
-
-                            // const bpm = readNext(valueFormat === 0 ? 1 : 2)
-                            // const sensor = (sensorContactStatus === 2) ? 'no contact' : ((sensorContactStatus === 3) ? 'contact' : 'N/A')
-                            // const energyExpended = readNext(energyExpendedStatus === 1 ? 2 : 0)
-                            // const rrSample = readNext(rrIntervalStatus === 1 ? 2 : 0)
-                            // // RR-Interval is provided with "Resolution of 1/1024 second"
-                            // const rr = rrSample && (rrSample * sampleCorrection) | 0
-
-
-                            // console.log('got some dataaaaaa! ', data.value);
-                            // console.log('prvi', value[0]);
-                            // console.log('drugi', value[1]);
-                            // console.log('treci', value[2]);
-                            // console.log('cetrvrti', value[3]);
                         }));
                     })
                     .catch((error) => {
